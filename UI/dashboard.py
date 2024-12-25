@@ -47,6 +47,7 @@ def display_top_weather_conditions(df):
             ax.set_xticklabels(top_5_weather.index, rotation=45)
 
             st.pyplot(fig)
+            save_plot(fig, 'Top 5 Weather Conditions by Traffic Volume')
         except KeyError:
             st.error("The dataset does not contain the required columns: 'weather_main' and 'traffic_volume'.")
 
@@ -68,6 +69,7 @@ def traffic_hour(df):
             ax.grid(True)
 
             st.pyplot(fig)
+            save_plot(fig, 'Hourly Traffic Volume')
         except KeyError:
             st.error("The dataset does not contain the required columns: 'date_time' in format %d-%m-%Y %H:%M and 'traffic_volume'.")
     else:
@@ -89,6 +91,7 @@ def traffic_volume_holiday(df):
             ax.set_xticklabels(holiday_traffic.index, rotation=45)
 
             st.pyplot(fig)
+            save_plot(fig, 'Average Traffic Volume by Holiday')
         except KeyError:
             st.error(
                 "The dataset does not contain the required columns: 'holiday' and 'traffic_volume'.")
@@ -97,6 +100,17 @@ def traffic_volume_holiday(df):
         st.warning(
             "No data available. Please upload a valid dataset.")
 
+def save_plot(fig, file_name_prefix):
+    """
+    Saves the plot as PNG or PDF based on user selection with a custom file name.
+    """
+    save_option = st.sidebar.selectbox("Save plot as:", ['None', 'PDF', 'PNG'])
+
+    if save_option != 'None':
+        file_name = f"{file_name_prefix}.{save_option.lower()}"
+        fig.savefig(file_name)
+        st.sidebar.download_button(label=f"Download {file_name_prefix} as {save_option}",
+                                   data=open(file_name, "rb").read(), file_name=file_name)
 def main():
     df = display_uploaded_file()
     if df is not None:
