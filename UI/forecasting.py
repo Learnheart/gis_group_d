@@ -30,6 +30,16 @@ def convert_temp(temp, scale):
         K_temp = ((temp - 32) * 5/9) + 273.15
     return K_temp
 
+# traffic light time
+def calculate_traffic_light_times(traffic_volume):
+    max_green_time = 70
+    max_red_time = 120
+
+    red_time = (traffic_volume / 7000) * max_green_time
+    green_time = ((7000 - traffic_volume) / 6000) * max_red_time
+
+    return green_time, red_time
+
 def main():
     st.title('Traffic Volumes Prediction')
     st.markdown("""
@@ -123,7 +133,18 @@ def main():
         print(input_data)
         # Make prediction
         prediction = model.predict(input_df)
-        st.success(f"The predicted traffic volume is: {prediction[0]:.4f}")
+        predicted_traffic_volume = prediction[0]
+        st.success(f"The predicted traffic volume is: {prediction[0]:.0f}")
+
+        # Traffic light time suggestion
+        green_time, red_time = calculate_traffic_light_times(
+            predicted_traffic_volume)
+        st.sidebar.subheader(
+            "Suggested Traffic Light Timings")
+        st.sidebar.write(
+            f"**Green Light Time:** {green_time:.2f} seconds")
+        st.sidebar.write(
+            f"**Red Light Time:** {red_time:.2f} seconds")
 
 if __name__ == "__main__":
     main()
