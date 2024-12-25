@@ -1,30 +1,42 @@
 import streamlit as st
 import pandas as pd
 import joblib
+from datetime import datetime, time
 
-model_path = '../model_building/saved_feature/gbr.joblib'
+model_path = '../model_building/saved_feature/xgb.joblib'
 model = joblib.load(model_path)
 
 def convert_datetime(date):
-    date = pd.DataFrame(date, format='%d-%m-%Y %H:%M')
+    # convert to pandas dataframe
+    date = pd.to_datetime(date)
     df = pd.DataFrame()
 
-    df['year'] = date.dt.year
-    df['month'] = date.dt.month
-    df['day'] = date.dt.day
-    df['hour'] = date.dt.hour
-    df['day_in_week'] = date.dt.weekday
-    df['is_weekend'] = df['day_in_week'].isin([5, 6]).astype(int)
+    date_series = pd.Series([date])
+
+    df['year'] = date_series.dt.year
+    df['month'] = date_series.dt.month
+    df['day'] = date_series.dt.day
+    df['hour'] = date_series.dt.hour
+    df['day_in_week'] = date_series.dt.weekday
+    df['is_weekend'] = date_series.dt.weekday.isin([5, 6]).astype(int)
 
     return df
 
-def concat_datetime(df, date, datetime):
-    data = pd.concat([df, date], axis=1)
-    data = data.drop(columns=datetime)
 
-    return data
+def convert_temp(temp, scale):
+    if scale == 'Celsius (C)':
+        K_temp = temp + 273.15
+    elif scale == 'Fahrenheit (F)':
+        K_temp = ((temp - 32) * 5/9) + 273.15
+    return K_temp
 
 def main():
+    st.title('Traffic Volumes Prediction')
+    st.markdown("""
+        Provide these information to make forecasting
+    """)
+
+    # Input fields
     holiday_mapping = {
         'Christmas Day': 0,
         'Columbus Day': 1,
@@ -50,6 +62,69 @@ def main():
         'No snow': 1
     }
 
+    cloud_mapping = {
+        'Clear': 0,
+        'Mostly Cloudy': 1,
+        'Overcast': 2,
+        'Party Cloudy': 3
+    }
 
+    weather_mapping = {
+        'Clear': 0,
+        'Clouds': 1,
+        'Mist': 2,
+        'Rain': 3,
+        'Snow': 4
+    }
 
+    holiday = st.selectbox("Select holiday:", list(holiday_mapping.keys()))
+    encoded_holiday = holiday_mapping[holiday]
 
+    temp = st.number_input("Input temperature", step=0.1)
+    temp_scale = st.selectbox("Select temperature scale:", ['Celsius (C)', 'Fahrenheit (F)'])
+    temp_in_kelvin = convert_temp(temp, temp_scale)  # Convert temperature to Kelvin
+
+    rain = st.selectbox("Select rain condition: ", list(rain_mapping.keys()))
+    encoded_rain = rain_mapping[rain]
+
+    snow = st.selectbox("Select snow condition: ", list(snow_mapping.keys()))
+    encoded_snow = snow_mapping[snow]
+
+    cloud = st.selectbox("Select cloud condition: ", list(cloud_mapping.keys()))
+    encoded_cloud = cloud_mapping[cloud]
+
+    weather = st.selectbox("Select weather condition: ", list(weather_mapping.keys()))
+    encoded_weather = weather_mapping[weather]
+
+    date = st.date_input("Select a date: ", value=datetime(2024, 12, 18).date())
+    time_input = st.time_input("Select a time", value=time(8, 0))
+
+    datetime_value = datetime.combine(date, time_input)
+    datetime_df = convert_datetime(datetime_value)
+
+    # Process after pressing the button
+    if st.button("Predict Traffic Volumes"):
+        input_data = {
+            "holiday": encoded_holiday,
+            "temp": temp_in_kelvin,
+            "rain_1h": encoded_rain,
+            "snow_1h": encoded_snow,
+            "clouds_all": encoded_cloud,
+            "weather_main": encoded_weather,
+            "year": datetime_df['year'].iloc[0],
+            "month": datetime_df['month'].iloc[0],
+            "day": datetime_df['day'].iloc[0],
+            "hour": datetime_df['hour'].iloc[0],
+            "day_in_week": datetime_df['day_in_week'].iloc[0],
+            "is_weekend": datetime_df['is_weekend'].iloc[0]
+        }
+
+        input_df = pd.DataFrame([input_data])
+        print(input_data)
+        # Make prediction
+        prediction = model.predict(input_df)
+        st.success(f"The predicted traffic volume is: {prediction[0]:.4f}")
+
+# Run the Streamlit app
+if __name__ == "__main__":
+    main()
