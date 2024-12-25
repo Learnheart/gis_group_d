@@ -125,6 +125,5 @@ def main():
         prediction = model.predict(input_df)
         st.success(f"The predicted traffic volume is: {prediction[0]:.4f}")
 
-# Run the Streamlit app
 if __name__ == "__main__":
     main()
